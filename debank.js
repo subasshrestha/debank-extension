@@ -7,7 +7,7 @@
         HOT_SORT__DEFAULT,
         HOT_SORT__CREATED,
         HOT_SORT__REWARD,
-    ]
+    ];
 
     const STREAM_FOLLOWING = 'following';
     const STREAM_HOT = 'hot';
@@ -21,7 +21,7 @@
         [STREAM_POSTS]: [],
         [STREAM_REPOSTS]: [],
         [STREAM_SEARCH]: [],
-    }
+    };
 
     const getConfig = () => {
         let hotSortBy = HOT_SORT__DEFAULT;
@@ -33,6 +33,7 @@
         let excludeBlacklistedWordsFromFollowing = false;
         let excludeBlacklistedWordsFromHot = false;
         let blacklistedWords = [];
+        let notTrustedFirst = false;
 
         try {
             const config = JSON.parse(localStorage.getItem('__debank_extension'));
@@ -69,6 +70,10 @@
                 excludeBlacklistedWordsFromHot = config.excludeBlacklistedWordsFromHot;
             }
 
+            if ([true, false].includes(config.notTrustedFirst)) {
+                notTrustedFirst = config.notTrustedFirst;
+            }
+
             if (Array.isArray(config.blacklistedWords)) {
                 blacklistedWords = config.blacklistedWords;
             }
@@ -89,8 +94,9 @@
             excludeBlacklistedWordsFromHot,
             blacklistedWords,
             lowerCasedBlacklistedWords,
-        }
-    }
+            notTrustedFirst,
+        };
+    };
 
     const setConfig = (partialConfig) => {
         const newConfig = getConfig();
@@ -127,12 +133,16 @@
             newConfig.excludeBlacklistedWordsFromHot = partialConfig.excludeBlacklistedWordsFromHot;
         }
 
+        if ([true, false].includes(partialConfig.notTrustedFirst)) {
+            newConfig.notTrustedFirst = partialConfig.notTrustedFirst;
+        }
+
         if (Array.isArray(partialConfig.blacklistedWords)) {
             newConfig.blacklistedWords = partialConfig.blacklistedWords;
         }
 
-        localStorage.setItem('__debank_extension', JSON.stringify(newConfig))
-    }
+        localStorage.setItem('__debank_extension', JSON.stringify(newConfig));
+    };
 
     const shouldBeBlacklisted = (article, lowerCasedBlacklistedWords) => {
         const content = article.content.toLowerCase();
@@ -149,7 +159,7 @@
         }
 
         return false;
-    }
+    };
 
     const saveMostRecentFeeds = (url, streamType, feeds) => {
         const create_at = new URL(url).searchParams.get('create_at');
@@ -163,9 +173,9 @@
             mostRecentFeeds[streamType] = [
                 ...mostRecentFeeds[streamType],
                 ...feedsFiltered,
-            ]
+            ];
         }
-    }
+    };
 
     const swapRequestResult = (response, transformResponseFn) => {
         response.json = () =>
@@ -181,7 +191,7 @@
                 });
 
         return response;
-    }
+    };
 
     const modifyHotResponse = (response) => {
         return swapRequestResult(response, result => {
@@ -192,6 +202,7 @@
                 excludePaidPostsFromHot,
                 excludeBlacklistedWordsFromHot,
                 lowerCasedBlacklistedWords,
+                notTrustedFirst,
             } = getConfig();
 
             result.data.feeds.sort((a, b) => {
@@ -205,10 +216,16 @@
                 }
             });
 
+            if (notTrustedFirst) {
+                result.data.feeds.sort((a, b) => {
+                    return a.article.is_trust - b.article.is_trust;
+                });
+            }
+
             const feeds = result.data.feeds
                 .filter(feed => {
-                    const {article} = feed;
-                    const {creator} = article;
+                    const { article } = feed;
+                    const { creator } = article;
 
                     if (excludeBlacklistedWordsFromHot) {
                         if (shouldBeBlacklisted(article, lowerCasedBlacklistedWords)) {
@@ -264,9 +281,9 @@
                     ...result.data,
                     feeds,
                 }
-            }
+            };
         });
-    }
+    };
 
     const modifyFollowingResponse = (response) => {
         return swapRequestResult(response, result => {
@@ -280,19 +297,19 @@
             const feeds = result.data.feeds.map(feed => {
                 if (excludeBlacklistedWordsFromFollowing) {
                     if (shouldBeBlacklisted(feed.article, lowerCasedBlacklistedWords)) {
-                        return {article: {}};
+                        return { article: {} };
                     }
                 }
 
                 if (excludeReposts) {
                     if (feed.repost_list.length > 0) {
-                        return {article: {}};
+                        return { article: {} };
                     }
                 }
 
                 if (excludePaidPostsFromFollowing) {
                     if (feed.article.price && !feed.article.is_paid) {
-                        return {article: {}};
+                        return { article: {} };
                     }
                 }
 
@@ -307,30 +324,30 @@
                     ...result.data,
                     feeds,
                 }
-            }
+            };
         });
-    }
+    };
 
     const modifyPostListResponse = (response) => {
         return swapRequestResult(response, result => {
             saveMostRecentFeeds(response.url, STREAM_POSTS, result.data.post_list);
             return result;
         });
-    }
+    };
 
     const modifyRepostListResponse = (response) => {
         return swapRequestResult(response, result => {
             saveMostRecentFeeds(response.url, STREAM_REPOSTS, result.data.repost_list);
             return result;
         });
-    }
+    };
 
     const modifySearchResponse = (response) => {
         return swapRequestResult(response, result => {
             saveMostRecentFeeds(response.url, STREAM_SEARCH, result.data.feeds);
             return result;
         });
-    }
+    };
 
     const tweakResponses = () => {
         const rawFetch = window.fetch;
@@ -351,11 +368,11 @@
             }
 
             return response;
-        }
-    }
+        };
+    };
 
     const getCurrentStreamType = () => {
-        const {href} = window.location;
+        const { href } = window.location;
 
         if (
             href === 'https://debank.com/stream' ||
@@ -373,15 +390,15 @@
         }
 
         return null;
-    }
+    };
 
     const getStreamIdByIndex = (streamType, index) => {
         return mostRecentFeeds[streamType]
             // some articles are intensionally broken so they aren't displayed on th stream
             // we have to skip their index
-            .filter(({article}) => article.id)
-            [index].article.id;
-    }
+            .filter(({ article }) => article.id)
+        [index].article.id;
+    };
 
     const experimentalFeatures = () => {
         document.addEventListener('click', e => {
@@ -403,7 +420,7 @@
 
             if (!streamType || !closestStreamItem) return;
 
-            const index = Number(closestStreamItem.dataset.index || closestStreamItem.dataset.itemIndex)
+            const index = Number(closestStreamItem.dataset.index || closestStreamItem.dataset.itemIndex);
             if (index >= 0) {
                 const streamId = getStreamIdByIndex(streamType, index);
                 if (streamId) {
@@ -412,8 +429,8 @@
                     window.open(`https://debank.com/stream/${streamId}`);
                 }
             }
-        }, true)
-    }
+        }, true);
+    };
 
     tweakResponses();
     experimentalFeatures();

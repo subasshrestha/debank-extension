@@ -9,23 +9,23 @@
         HOT_SORT__REWARD,
     ];
 
-    const THEME_DEFAULT = 'default'
-    const THEME_DARK = 'dark'
+    const THEME_DEFAULT = 'default';
+    const THEME_DARK = 'dark';
     const THEMES = [
         THEME_DEFAULT,
         THEME_DARK,
-    ]
+    ];
 
     const vermi321ProfileUrl = 'https://debank.com/profile/0x4c81c1d6fb83f063ccc7eb50400569bf830b5492?t=1692901643019&r=77271';
 
     const applyTheme = async () => {
         let theme = await new Promise(res => {
-            chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
-                const {id, url} = tabs[0];
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+                const { id, url } = tabs[0];
                 if (new URL(url).hostname === 'debank.com') {
                     chrome.scripting
                         .executeScript({
-                            target: {tabId: id},
+                            target: { tabId: id },
                             func: () => document.documentElement.getAttribute('theme'),
                         })
                         .then(injectionResults =>
@@ -49,8 +49,8 @@
         }
 
         document.documentElement.setAttribute('theme', theme);
-        chrome.storage.local.set({theme});
-    }
+        chrome.storage.local.set({ theme });
+    };
 
     const getConfig = async () => {
         let hotSortBy = HOT_SORT__DEFAULT;
@@ -62,9 +62,10 @@
         let excludeBlacklistedWordsFromFollowing = false;
         let excludeBlacklistedWordsFromHot = false;
         let blacklistedWords = [];
+        let notTrustedFirst = false;
 
         try {
-            const {config} = await chrome.storage.local.get();
+            const { config } = await chrome.storage.local.get();
 
             if (HOT_SORT_OPTIONS.includes(config.hotSortBy)) {
                 hotSortBy = config.hotSortBy;
@@ -98,6 +99,10 @@
                 excludeBlacklistedWordsFromHot = config.excludeBlacklistedWordsFromHot;
             }
 
+            if ([true, false].includes(config.notTrustedFirst)) {
+                notTrustedFirst = config.notTrustedFirst;
+            }
+
             if (Array.isArray(config.blacklistedWords)) {
                 blacklistedWords = config.blacklistedWords;
             }
@@ -115,16 +120,17 @@
             excludeBlacklistedWordsFromFollowing,
             excludeBlacklistedWordsFromHot,
             blacklistedWords,
-        }
-    }
+            notTrustedFirst,
+        };
+    };
 
     let config = await getConfig();
 
     const communicateConfigChange = async (config) => {
-        chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
             await chrome.scripting
                 .executeScript({
-                    target: {tabId: tabs[0].id},
+                    target: { tabId: tabs[0].id },
                     func: applyExtensionSettings,
                     args: [config],
                 });
@@ -133,7 +139,7 @@
 
     const applyExtensionSettings = (config) => {
         document.body.dispatchEvent(new CustomEvent('__debank_extension', {
-            detail: {config}
+            detail: { config }
         }));
     };
 
@@ -163,6 +169,7 @@
                         <label><input type="radio" name="sort-by" value="default" ${config.hotSortBy === HOT_SORT__DEFAULT ? 'checked' : ''}/> Default</label>
                         <label><input type="radio" name="sort-by" value="created" ${config.hotSortBy === HOT_SORT__CREATED ? 'checked' : ''}/> Created</label>
                         <label><input type="radio" name="sort-by" value="reward" ${config.hotSortBy === HOT_SORT__REWARD ? 'checked' : ''}/> Reward pool</label>
+                        <label><input type="checkbox" name="not-trusted-first" ${config.notTrustedFirst === true ? 'checked' : ''}/>Show not trusted first</label>
                     </div>
                     <div>
                         <h4>Exclude posts</h4>
@@ -210,9 +217,10 @@
                 .split(/,|\r\n|\r|\n/)
                 .map(w => w.trim())
                 .filter(Boolean),
-        }
+            notTrustedFirst: !!formData['not-trusted-first'],
+        };
 
-        chrome.storage.local.set({config});
+        chrome.storage.local.set({ config });
         communicateConfigChange(config);
         showSuccessMessage();
     });
