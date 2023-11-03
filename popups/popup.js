@@ -57,6 +57,7 @@
         let excludeOfficialAccounts = false;
         let excludeNonFollowing = false;
         let excludeReposts = false;
+        let onlyDraws = false;
         let excludePaidPostsFromFollowing = false;
         let excludePaidPostsFromHot = false;
         let excludeBlacklistedWordsFromFollowing = false;
@@ -81,6 +82,10 @@
 
             if ([true, false].includes(config.excludeReposts)) {
                 excludeReposts = config.excludeReposts;
+            }
+
+            if ([true, false].includes(config.onlyDraws)) {
+                onlyDraws = config.onlyDraws;
             }
 
             if ([true, false].includes(config.excludePaidPostsFromFollowing)) {
@@ -115,6 +120,7 @@
             excludeOfficialAccounts,
             excludeNonFollowing,
             excludeReposts,
+            onlyDraws,
             excludePaidPostsFromFollowing,
             excludePaidPostsFromHot,
             excludeBlacklistedWordsFromFollowing,
@@ -154,6 +160,12 @@
         <form id="hot-stream-settings">
             <div class="columns">
                 <div class="column">
+                    <h3>General</h3>
+                    <div>
+                        <label><input type="checkbox" name="only-draws" ${config.onlyDraws === true ? 'checked' : ''}/>Only Draws</label>
+                    </div>
+                </div>
+                <div class="column">
                     <h3>Following stream</h3>
                     <div>
                         <h4>Exclude posts</h4>
@@ -164,12 +176,12 @@
                 </div>
                 <div class="column">
                     <h3>Hot stream</h3>
+                    <label><input type="checkbox" name="not-trusted-first" ${config.notTrustedFirst === true ? 'checked' : ''}/>Show not trusted first</label>
                     <div>
                         <h4>Sort by</h4>
                         <label><input type="radio" name="sort-by" value="default" ${config.hotSortBy === HOT_SORT__DEFAULT ? 'checked' : ''}/> Default</label>
                         <label><input type="radio" name="sort-by" value="created" ${config.hotSortBy === HOT_SORT__CREATED ? 'checked' : ''}/> Created</label>
                         <label><input type="radio" name="sort-by" value="reward" ${config.hotSortBy === HOT_SORT__REWARD ? 'checked' : ''}/> Reward pool</label>
-                        <label><input type="checkbox" name="not-trusted-first" ${config.notTrustedFirst === true ? 'checked' : ''}/>Show not trusted first</label>
                     </div>
                     <div>
                         <h4>Exclude posts</h4>
@@ -209,6 +221,7 @@
             excludeOfficialAccounts: !!formData['official-accounts'],
             excludeNonFollowing: !!formData['non-followers'],
             excludeReposts: !!formData['reposts'],
+            onlyDraws: !!formData['only-draws'],
             excludePaidPostsFromFollowing: !!formData['paid-following'],
             excludePaidPostsFromHot: !!formData['paid-hot'],
             excludeBlacklistedWordsFromFollowing: !!formData['blacklist-following'],

@@ -28,6 +28,7 @@
         let excludeOfficialAccounts = false;
         let excludeNonFollowing = false;
         let excludeReposts = false;
+        let onlyDraws = false;
         let excludePaidPostsFromFollowing = false;
         let excludePaidPostsFromHot = false;
         let excludeBlacklistedWordsFromFollowing = false;
@@ -52,6 +53,10 @@
 
             if ([true, false].includes(config.excludeReposts)) {
                 excludeReposts = config.excludeReposts;
+            }
+
+            if ([true, false].includes(config.onlyDraws)) {
+                onlyDraws = config.onlyDraws;
             }
 
             if ([true, false].includes(config.excludePaidPostsFromFollowing)) {
@@ -88,6 +93,7 @@
             excludeOfficialAccounts,
             excludeNonFollowing,
             excludeReposts,
+            onlyDraws,
             excludePaidPostsFromFollowing,
             excludePaidPostsFromHot,
             excludeBlacklistedWordsFromFollowing,
@@ -115,6 +121,10 @@
 
         if ([true, false].includes(partialConfig.excludeReposts)) {
             newConfig.excludeReposts = partialConfig.excludeReposts;
+        }
+
+        if ([true, false].includes(partialConfig.onlyDraws)) {
+            newConfig.onlyDraws = partialConfig.onlyDraws;
         }
 
         if ([true, false].includes(partialConfig.excludePaidPostsFromFollowing)) {
@@ -203,6 +213,7 @@
                 excludeBlacklistedWordsFromHot,
                 lowerCasedBlacklistedWords,
                 notTrustedFirst,
+                onlyDraws,
             } = getConfig();
 
             result.data.feeds.sort((a, b) => {
@@ -267,6 +278,12 @@
                         }
                     }
 
+                    if (onlyDraws) {
+                        if (feed.article.type !== 'draw') {
+                            return false;
+                        }
+                    }
+                    
                     return true;
                 })
                 .map(feed => {
@@ -289,6 +306,7 @@
         return swapRequestResult(response, result => {
             const {
                 excludeReposts,
+                onlyDraws,
                 excludePaidPostsFromFollowing,
                 excludeBlacklistedWordsFromFollowing,
                 lowerCasedBlacklistedWords,
@@ -297,19 +315,41 @@
             const feeds = result.data.feeds.map(feed => {
                 if (excludeBlacklistedWordsFromFollowing) {
                     if (shouldBeBlacklisted(feed.article, lowerCasedBlacklistedWords)) {
-                        return { article: {} };
+                        return {
+                            article: {
+                                create_at: feed.article.create_at,
+                            }
+                        };
                     }
                 }
 
                 if (excludeReposts) {
                     if (feed.repost_list.length > 0) {
-                        return { article: {} };
+                        return {
+                            article: {
+                                create_at: feed.article.create_at,
+                            }
+                        };
+                    }
+                }
+
+                if (onlyDraws) {
+                    if (feed.article.type !== 'draw') {
+                        return {
+                            article: {
+                                create_at: feed.article.create_at,
+                            }
+                        };
                     }
                 }
 
                 if (excludePaidPostsFromFollowing) {
                     if (feed.article.price && !feed.article.is_paid) {
-                        return { article: {} };
+                        return {
+                            article: {
+                                create_at: feed.article.create_at,
+                            }
+                        };
                     }
                 }
 
