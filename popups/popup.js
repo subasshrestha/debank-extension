@@ -58,6 +58,7 @@
         let excludeNonFollowing = false;
         let excludeReposts = false;
         let onlyDraws = false;
+        let hideJoinedDraws = false;
         let excludePaidPostsFromFollowing = false;
         let excludePaidPostsFromHot = false;
         let excludeBlacklistedWordsFromFollowing = false;
@@ -86,6 +87,10 @@
 
             if ([true, false].includes(config.onlyDraws)) {
                 onlyDraws = config.onlyDraws;
+            }
+
+            if ([true, false].includes(config.hideJoinedDraws)) {
+                hideJoinedDraws = config.hideJoinedDraws;
             }
 
             if ([true, false].includes(config.excludePaidPostsFromFollowing)) {
@@ -121,6 +126,7 @@
             excludeNonFollowing,
             excludeReposts,
             onlyDraws,
+            hideJoinedDraws,
             excludePaidPostsFromFollowing,
             excludePaidPostsFromHot,
             excludeBlacklistedWordsFromFollowing,
@@ -163,6 +169,9 @@
                     <h3>General</h3>
                     <div>
                         <label><input type="checkbox" name="only-draws" ${config.onlyDraws === true ? 'checked' : ''}/>Only Draws</label>
+                    </div>
+                    <div>
+                        <label><input type="checkbox" name="hide-joined-draws" ${config.hideJoinedDraws === true ? 'checked' : ''}/>Hide Joined Draws</label>
                     </div>
                 </div>
                 <div class="column">
@@ -222,6 +231,7 @@
             excludeNonFollowing: !!formData['non-followers'],
             excludeReposts: !!formData['reposts'],
             onlyDraws: !!formData['only-draws'],
+            hideJoinedDraws: !!formData['hide-joined-draws'],
             excludePaidPostsFromFollowing: !!formData['paid-following'],
             excludePaidPostsFromHot: !!formData['paid-hot'],
             excludeBlacklistedWordsFromFollowing: !!formData['blacklist-following'],

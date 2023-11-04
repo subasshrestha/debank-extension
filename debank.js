@@ -29,6 +29,7 @@
         let excludeNonFollowing = false;
         let excludeReposts = false;
         let onlyDraws = false;
+        let hideJoinedDraws = false;
         let excludePaidPostsFromFollowing = false;
         let excludePaidPostsFromHot = false;
         let excludeBlacklistedWordsFromFollowing = false;
@@ -57,6 +58,14 @@
 
             if ([true, false].includes(config.onlyDraws)) {
                 onlyDraws = config.onlyDraws;
+            }
+
+            if([true, false].includes(config.hideJoinedDraws)) {
+                hideJoinedDraws = config.hideJoinedDraws;
+            }
+
+            if ([true, false].includes(config.hideJoinedDraws)) {
+                hideJoinedDraws = config.hideJoinedDraws;
             }
 
             if ([true, false].includes(config.excludePaidPostsFromFollowing)) {
@@ -94,6 +103,7 @@
             excludeNonFollowing,
             excludeReposts,
             onlyDraws,
+            hideJoinedDraws,
             excludePaidPostsFromFollowing,
             excludePaidPostsFromHot,
             excludeBlacklistedWordsFromFollowing,
@@ -125,6 +135,10 @@
 
         if ([true, false].includes(partialConfig.onlyDraws)) {
             newConfig.onlyDraws = partialConfig.onlyDraws;
+        }
+
+        if ([true, false].includes(partialConfig.hideJoinedDraws)) {
+            newConfig.hideJoinedDraws = partialConfig.hideJoinedDraws;
         }
 
         if ([true, false].includes(partialConfig.excludePaidPostsFromFollowing)) {
@@ -214,6 +228,7 @@
                 lowerCasedBlacklistedWords,
                 notTrustedFirst,
                 onlyDraws,
+                hideJoinedDraws,
             } = getConfig();
 
             result.data.feeds.sort((a, b) => {
@@ -279,11 +294,17 @@
                     }
 
                     if (onlyDraws) {
-                        if (feed.article.type !== 'draw') {
+                        if (feed.article.type !== 'draw' || feed.article.draw?.is_settled) {
                             return false;
                         }
                     }
-                    
+
+                    if (hideJoinedDraws) {
+                        if (feed.article.type === 'draw' && feed.article.draw?.is_joined) {
+                            return false;
+                        }
+                    }
+
                     return true;
                 })
                 .map(feed => {
@@ -307,12 +328,13 @@
             const {
                 excludeReposts,
                 onlyDraws,
+                hideJoinedDraws,
                 excludePaidPostsFromFollowing,
                 excludeBlacklistedWordsFromFollowing,
                 lowerCasedBlacklistedWords,
             } = getConfig();
 
-            const feeds = result.data.feeds.map(feed => {
+            let feeds = result.data.feeds.map(feed => {
                 if (excludeBlacklistedWordsFromFollowing) {
                     if (shouldBeBlacklisted(feed.article, lowerCasedBlacklistedWords)) {
                         return {
@@ -334,7 +356,17 @@
                 }
 
                 if (onlyDraws) {
-                    if (feed.article.type !== 'draw') {
+                    if (feed.article.type !== 'draw' || feed.article.draw?.is_settled) {
+                        return {
+                            article: {
+                                create_at: feed.article.create_at,
+                            }
+                        };
+                    }
+                }
+
+                if (hideJoinedDraws) {
+                    if (feed.article.type === 'draw' && feed.article.draw?.is_joined) {
                         return {
                             article: {
                                 create_at: feed.article.create_at,
@@ -355,7 +387,9 @@
 
                 return feed;
             });
-
+            if (feeds.filter(feed => !!feed.article.id).length === 0) {
+                feeds[0] = result.data.feeds[0];
+            }
             saveMostRecentFeeds(response.url, STREAM_FOLLOWING, feeds);
 
             return {
